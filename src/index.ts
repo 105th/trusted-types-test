@@ -3,8 +3,17 @@ type Header = {
     value: string,
 }
 
+const enum IDS {
+    default = 'default',
+    somepolicy = 'some-policy',
+    AGPolicy = 'agpolicy',
+    script = 'script',
+    duplicates = 'duplicates',
+}
+
 type HeaderData = {
-    id: string,
+    id: IDS,
+    name: string,
     cspHeader: Header
 }
 
@@ -14,31 +23,43 @@ type Headers = {
 
 const headers: Headers = {
     default: {
-        id: 'default',
+        id: IDS.default,
+        name: 'one two default',
         cspHeader: {
             key: 'Content-Security-Policy',
-            value: 'trusted-types one two default'
+            value: `trusted-types one two default; require-trusted-types-for 'script';`
+        },
+    },
+    somepolicy: {
+        id: IDS.somepolicy,
+        name: 'some-policy',
+        cspHeader: {
+            key: 'Content-Security-Policy',
+            value: `trusted-types some-policy; require-trusted-types-for 'script';`
         },
     },
     adguard: {
-        id: 'adguard',
+        id: IDS.AGPolicy,
+        name: 'one two AGPolicy',
         cspHeader: {
             key: 'Content-Security-Policy',
-            value: 'trusted-types one two AGPolicy'
+            value: `trusted-types one two AGPolicy; require-trusted-types-for 'script';`
         },
     },
     script: {
-        id: 'script',
+        id: IDS.script,
+        name: 'only require-trusted-types-for',
         cspHeader: {
             key: 'Content-Security-Policy',
-            value: 'require-trusted-types-for \'script\''
+            value: `require-trusted-types-for 'script'`
         }
     },
     duplicates: {
-        id: 'duplicates',
+        id: IDS.duplicates,
+        name: 'one two AGPolicy with "allow-duplicates"',
         cspHeader: {
             key: 'Content-Security-Policy',
-            value: 'trusted-types one two AGPolicy \'allow-duplicates\''
+            value: `trusted-types one two AGPolicy 'allow-duplicates'; require-trusted-types-for 'script';`
         }
     }
 }
@@ -51,8 +72,15 @@ const renderPage = (header: HeaderData) => {
     <title>Trusted Types Test</title>
 </head>
 <body>
-   <h1>${header.id}</h1>
+   <h1>${header.name}</h1>
    <a href="/">Back</a>
+   <iframe
+        src="https://iframe.mediadelivery.net/embed/2196/55f000fa-aed6-4cd0-99b8-5ff963f2e459?autoplay=true"
+        loading="lazy"
+        style="border: none"
+        allowfullscreen="true"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+    ></iframe>
 </body>
 </html>`;
 }
@@ -67,9 +95,10 @@ const getResponse = (header: HeaderData) => {
 }
 
 const renderRoot = (headers: Headers) => {
-    const headersItems = Object.keys(headers).map((key) => {
-        return `<li><a href="/${key}">${key}</a></li>`;
-    });
+    const headersItems = Object.values(headers)
+        .map((item) => {
+            return `<li><a href="/${item.id}">${item.name}</a></li>`;
+        });
 
     const headersList = `<ul>${headersItems.join('')}</ul>`
 
@@ -80,6 +109,7 @@ const renderRoot = (headers: Headers) => {
     <title>Trusted Types Test</title>
 </head>
 <body>
+    Test links:
    ${headersList}
 </body>
 </html>`;
@@ -101,6 +131,9 @@ const handleRequest = async (request: Request): Promise<Response> => {
             });
         case `/${headers.default.id}`: {
             return getResponse(headers.default);
+        }
+        case `/${headers.somepolicy.id}`: {
+            return getResponse(headers.somepolicy);
         }
         case `/${headers.adguard.id}`: {
             return getResponse(headers.adguard);
